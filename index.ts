@@ -1,3 +1,8 @@
-[1, 2, 3].forEach((v) => v);
-[1, 2, 3].forEach((v) => console.log(v));
-[1, 2, 3].forEach((v) => v.toString());
+interface Original {
+  name: string;
+  age: number;
+  married: boolean;
+}
+type Copy = {
+  [Key in keyof Original as Capitalize<Key>]: Original[Key];
+};
