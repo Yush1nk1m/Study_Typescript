@@ -713,3 +713,211 @@ type Copy = {
   [Key in keyof Original as Capitalize<Key>]: Original[Key];
 };
 ```
+
+## 2.11 타입을 집합으로 생각하자(유니언, 인터섹션)
+
+**유니언, 인터섹션 연산자**
+
+```
+type A = string | boolean;
+type B = boolean | number;
+type C = A & B; // never
+
+type D = {} & (string | null); // string
+
+type E = string & boolean; // never
+
+type F = unknown | {}; // unknown
+type G = never & {}; // never
+
+type H = { a: "b" } & number; // { a: "b" } & number
+type I = null & { a: "b" }; // never
+type J = {} & string; // string
+```
+
+타입스크립트의 타입은 집합 관계로 볼 수 있다. 그래서 유니언 연산자를 사용하면 합집합을 나타낼 수 있고, 인터섹션 연산자를 사용하면 교집합을 나타낼 수 있다. 집합적인 관점에서 `never` 타입은 공집합이라고 볼 수 있고, `unknown` 타입은 전체집합이라고 볼 수 있다.
+
+타입스크립트는 좁은 타입을 넓은 타입에 대입하는 것을 허용한다. 집합 관계로 생각하자면 A 타입이 B 타입에 포함되는 경우 A를 B에 대입할 수 있는 것이다. 그러므로 `never` 타입은 모든 타입에 대입할 수 있고, `unknown`은 자기 자신과 `any` 타입을 제외한 모든 타입에 대입할 수 없다. 여기서 `any`는 집합 관계를 무시하는 이상한 타입이다.
+
+단, `null`, `undefined`를 제외한 원시 자료형과 객체에 대해 `&` 연산을 적용할 때는 `never`가 되지 않는다.
+
+## 2.12 타입도 상속이 가능하다
+
+**인터페이스를 사용한 타입의 상속**
+
+```
+interface Animal {
+  name: string;
+}
+
+interface Dog extends Animal {
+  bark(): void;
+}
+
+interface Cat extends Animal {
+  meow(): void;
+}
+```
+
+`extends` 예약어를 사용하면 기존 타입을 상속할 수 있다. 상속을 통해 기존 타입의 중복 선언을 막을 수 있다.
+
+타입 별칭에서도 상속처럼 작업할 수 있다.
+
+**타입 별칭을 사용한 타입의 상속**
+
+```
+type Animal = {
+  name: string;
+};
+
+type Dog = Animal & {
+  bark(): void;
+};
+
+type Cat = Animal & {
+  meow(): void;
+};
+
+type Name = Cat["name"];
+```
+
+인터페이스와 타입 간 상속도 가능하고, 다중 상속도 가능하다. 상속할 때 부모 타입에 있는 속성을 확장할 수도 있다. 주의해야 할 점은 타입 별칭 사용 시 `&` 연산자가 아닌 `|` 연산자를 사용하면 전혀 다른 의미를 갖게 된다는 것, 그리고 부모 타입에 있는 속성을 아예 다른 속성으로 변경하는 것은 불가능하다는 것이다.
+
+## 2.13 객체 간에 대입할 수 있는지 확인하는 법을 배우자
+
+2.10절에서 객체 리터럴이 아닌 변수를 대입하면 잉여 속성 검사가 일어나지 않는 것을 확인한 바 있다. 이런 경우엔 객체 간 대입 가능 여부를 따져봐야 한다.
+
+**객체 간 대입**
+
+```
+interface A {
+  name: string;
+}
+interface B {
+  name: string;
+  age: number;
+}
+
+const aObj = {
+  name: "yushin",
+};
+
+const bObj = {
+  name: "yeonwoo",
+  age: 23,
+};
+
+const aToA: A = aObj; // O
+const bToA: A = bObj; // O
+const aToB: B = aObj; // X
+const bToB: B = bObj; // O
+```
+
+좁은 타입을 넓은 타입에 대입할 순 있지만, 역은 불가능하다. 좁은 타입은 더 구체적인 타입, 넓은 타입은 더 추상적인 타입이다. 집합 관계로 보면 `B`는 `A`와 `{ age: number }` 타입의 교집합인 것이다.
+
+이와 관련하여 객체의 속성을 제외한 것에 `readonly` 수식어가 붙거나, `?` 연산자가 붙은 타입은 원래의 타입보다 더 넓은 타입이다. 수정 가능한 객체는 수정 불가능한 객체 집합에 있어도 상관이 없다. 왜냐하면 수정을 안 하면 되기 때문이다. 그러나 역은 불가능하다. 수정 불가능한 객체가 수정 가능해선 안 되기 때문이다. 옵셔널 객체는 그 자체로 `undefined`와 합집합이기 때문에 더 넓은 타입이 되는 것이다.
+
+단, 객체의 속성에 `readonly` 수식어가 붙은 것은 서로 대입할 수 있다.
+
+**객체의 속성은 작동 방식이 다르다**
+
+```
+type ReadOnly = {
+  readonly a: string;
+};
+type Mandatory = {
+  a: string;
+};
+
+const o: ReadOnly = {
+  a: "hi",
+};
+const m: Mandatory = {
+  a: "hi",
+};
+
+const o2: ReadOnly = m;
+const m2: Mandatory = o;
+```
+
+이것은 예외적인 것은 아니고 타입스크립트의 구조적 타입 시스템이 우선하기 때문이다.
+
+### 2.13.1 구조적 타이핑
+
+**구조적 타이핑**
+
+```
+interface Money {
+  amount: number;
+  unit: string;
+}
+interface Liter {
+  amount: number;
+  unit: string;
+}
+
+const liter: Liter = { amount: 1, unit: "liter" };
+const circle: Money = liter;
+```
+
+타입스크립트에서는 객체의 모든 속성이 동일하면 타입 이름이 다르더라도 같은 타입으로 간주한다. 이를 구조적 타이핑(structural typing)이라고 부른다. 이는 두 타입 간에 서로의 타입이 완벽히 일치해야 한다는 것이 아니라, 하나라도 다른 타입의 모든 속성을 그대로 가지고 있으면 적용된다.
+
+그러므로 위 예제에서 `Money` 타입과 `Liter` 타입이 동일하지 않은 것으로 인식되게 하려면 브랜딩(branding)이라는 기법을 사용해야 한다.
+
+**브랜딩 사용**
+
+```
+interface Money {
+  __type: "money";
+  amount: number;
+  unit: string;
+}
+interface Liter {
+  __type: "liter";
+  amount: number;
+  unit: string;
+}
+
+const liter: Liter = { amount: 1, unit: "liter", __type: "liter" };
+const circle: Money = liter; // X
+```
+
+여기서 `__type` 같은 속성을 브랜드(brand) 속성이라고 부른다.
+
+## 2.14 제네릭으로 타입을 함수처럼 사용하자
+
+자바스크립트에서는 값에 중복이 발생하면 함수를 사용해 최적화하기도 한다. 대표적인 것이 팩토리 패턴이다.
+
+**팩토리 패턴**
+
+```
+const personFactory = (name, age) => ({
+  type: "human",
+  race: "yellow",
+  name,
+  age,
+});
+
+const person1 = personFactory("yushin", 24);
+const person2 = personFactory("yeonwoo", 23);
+```
+
+타입스크립트에선 이처럼 타입의 중복이 발생하면 제네릭(generic)을 사용해 중복을 제거한다.
+
+**인터페이스에 제네릭 사용**
+
+```
+interface Person<N, A> {
+  type: "human";
+  race: "yellow";
+  name: N;
+  age: A;
+}
+
+interface Yushin extends Person<"yushin", 24> {}
+interface Yeonwoo extends Person<"yeonwoo", 23> {}
+```
+
+제네릭은 `<>` 안에 타입 매개변수(Type Parameter)를 전달해 사용한다. 인터페이스뿐만 아니라 클래스, 타입 별칭, 함수에도 제네릭 사용이 가능하다.
+
+**클래스, 타입 별칭, 함수에 제네릭 사용**

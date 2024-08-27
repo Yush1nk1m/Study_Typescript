@@ -1,8 +1,9 @@
-interface Original {
-  name: string;
-  age: number;
-  married: boolean;
+interface Person<N, A> {
+  type: "human";
+  race: "yellow";
+  name: N;
+  age: A;
 }
-type Copy = {
-  [Key in keyof Original as Capitalize<Key>]: Original[Key];
-};
+
+interface Yushin extends Person<"yushin", 24> {}
+interface Yeonwoo extends Person<"yeonwoo", 23> {}
