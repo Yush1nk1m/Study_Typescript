@@ -920,4 +920,188 @@ interface Yeonwoo extends Person<"yeonwoo", 23> {}
 
 제네릭은 `<>` 안에 타입 매개변수(Type Parameter)를 전달해 사용한다. 인터페이스뿐만 아니라 클래스, 타입 별칭, 함수에도 제네릭 사용이 가능하다.
 
-**클래스, 타입 별칭, 함수에 제네릭 사용**
+**타입 별칭에 제네릭 사용**
+
+```
+type Person<N, A> = {
+  type: "human";
+  race: "yellow";
+  name: N;
+  age: A;
+};
+
+type Yushin = Person<"yushin", 24>;
+type Yeonwoo = Person<"yeonwoo", 23>;
+```
+
+인터페이스와 타입 별칭 간에는 교차 사용이 가능하다.
+
+**클래스에 제네릭 사용**
+
+```
+class Person<N, A> {
+  name: N;
+  age: A;
+
+  constructor(name: N, age: A) {
+    this.name = name;
+    this.age = age;
+  }
+}
+```
+
+**함수에 제네릭 사용**
+
+```
+// 함수 표현식
+const personFactoryE = <N, A>(name: N, age: A) => ({
+  type: "human",
+  race: "yellow",
+  name,
+  age,
+});
+
+// 함수 선언문
+function personFactoryD<N, A>(name: N, age: A) {
+  return {
+    type: "human",
+    race: "yellow",
+    name,
+    age,
+  };
+}
+```
+
+함수에 제네릭을 사용하는 경우엔 표현식과 선언문의 제네릭 위치가 다르므로 주의해야 한다.
+
+**타입 매개변수의 기본값 지정**
+
+```
+interface Person<N = string, A = number> {
+  type: "human";
+  race: "yellow";
+  name: N;
+  age: A;
+}
+
+type Person1 = Person; // string, number
+type Person2 = Person<number>; // number, number
+type Person3 = Person<number, boolean>; // number, boolean
+```
+
+타입스크립트 5.0부터는 상수 타입 매개변수가 추가되었다. 이것은 타입에 대응되는 값이 `as const`인 것과 같은 효과를 낸다.
+
+**상수 타입 매개변수**
+
+```
+function values<const T>(initial: T[]) {
+  return {
+    hasValue(value: T) {
+      return initial.includes(value);
+    },
+  };
+}
+
+const savedValues = values(["a", "b", "c"]);
+savedValues.hasValue("a");
+```
+
+이 예제에서 실매개변수로 전달되는 배열은 상수 타입 매개변수 선언으로 인해 튜플로 취급된다.
+
+### 2.14.1 제네릭에 제약 걸기
+
+타입 매개변수에는 `extends` 문법으로 제약(constraint)을 사용할 수 있다. 이는 상속의 의미가 아닌 타입 종류를 제한하는 의미이다. 제약이 걸려 있는 타입은 그보다 더 좁은 타입만 대입 가능하다.
+
+**제네릭에 extends 사용**
+
+```
+interface Example<A extends number, B = string> {
+  a: A;
+  b: B;
+}
+
+type Usecase1 = Example<string, boolean>; // X
+type Usecase2 = Example<1, boolean>; // O
+type Usecase3 = Example<number>; // O
+```
+
+**자주 사용되는 제약**
+
+```
+<T extends object>  // 모든 객체
+<T extends any[]> // 모든 배열
+<T extends (...args: any) => any> // 모든 함수
+<T extends abstract new (...args: any) => any>  // 생성자 타입
+<T extends keyof any> // string | number | symbol
+```
+
+## 2.15 조건문과 비슷한 컨디셔널 타입이 있다
+
+**컨디셔널 타입**
+
+```
+type A1 = string;
+type B1 = A1 extends string ? number : boolean;
+
+type A2 = number;
+type B2 = A2 extends string ? number : boolean;
+```
+
+`extends`와 삼항 연산자를 사용해 컨디셔널 타입을 만들 수 있다. 이는 어떤 타입이 특정 타입의 부분집합인 경우와 그렇지 않은 경우에 타입을 어떻게 대입할지에 관한 것이다. 삼항 연산자는 중첩이 가능하다.
+
+`never`는 공집합이기 때문에 모든 타입을 `extends` 할 수 있다. 매핑된 객체 타입에선 키가 `never`이면 해당 속성은 제거되는데 이를 활용해 컨디셔널 타입을 함께 사용할 수 있다.
+
+**매핑된 객체 타입에서의 컨디셔널 타입 사용**
+
+```
+type OmitByType<O, T> = {
+  [K in keyof O as O[K] extends T ? never : K]: O[K];
+};
+
+type Result = OmitByType<
+  {
+    name: string;
+    age: number;
+    married: boolean;
+    rich: boolean;
+  },
+  boolean
+>;
+```
+
+타입에서 특정 타입의 부분집합인 특정 키를 제거하는 코드이다.
+
+### 2.15.1 컨디셔널 타입 분배법칙
+
+컨디셔널 타입, 제네릭, `never`의 조합은 복잡한 상황에서 주로 쓰인다. 예를 들어 `string | number` 타입으로부터 `string[]` 타입을 얻고 싶은 상황을 가정해 보자. `string | number` 타입은 기본적으로 `string` 타입보다 넓은 타입이기 때문에 그 자체로 컨디셔널 타입 문법을 사용할 수 없다. 이때 제네릭의 분배법칙이 사용된다.
+
+**컨디셔널 타입과 제네릭의 분배법칙**
+
+```
+type Start = string | number;
+type Result<Key> = Key extends string ? string[] : never;
+let n: Result<Start> = ["hello"];
+```
+
+검사하려는 타입이 제네릭이면서 유니언이면 분배법칙이 수행된다. 이 경우 `Result<string | number>`는 `Result<stirng> | Result<number>`가 되는 것이다. 이후에 `Result<number>` 타입은 `never`로 변환되어 사라져 `string[]` 타입이 반환된다. `boolean` 타입은 이런 방식으로 시도하면 `boolean[]` 타입이 아닌 `false[] | true[]` 타입이 반환되므로 주의해야 한다.
+
+그리고 분배법칙이 수행되는 것을 막고 싶은 경우가 있을 수도 있다. 이럴 때는 `type Result<Key> = [Key] extends [string] ? string[] : never`처럼 `[]`로 묶어주어야 한다.
+
+**never의 분배법칙**
+
+```
+type R<T> = T extends string ? true : false;
+type RR = R<never>; // never
+```
+
+`never`의 경우 공집합이기 때문에 분배법칙 자체를 수행하지 않는다. 그래서 `true` 또는 `false` 타입이 아닌 `never` 타입이 반환된다. 컨디셔널 타입에서 제네릭과 `never`가 만나면 `never`가 된다. 그래서 이 경우에 `never`가 유의미하게 작동하게 하려면 `[]`로 감싸서 분배법칙을 막아야 한다.
+
+**never의 분배법칙 차단**
+
+```
+type IsNever<T> = [T] extends [never] ? true : false;
+type T = IsNever<never>; // true
+type F = IsNever<"never">; // false
+```
+
+## 2.16 함수와 메서드를 타이핑하자
