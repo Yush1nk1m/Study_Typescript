@@ -4,7 +4,8 @@
     "module": "ESNext", // 모듈 시스템 설정
     "outDir": "dist", // 컴파일 결과 생성되는 코드 경로 설정
     "strict": true, // 엄격한 타입 검사 설정
-    "moduleDetection": "force" // 각각의 파일을 독립적인 모듈로 간주하도록 설정
+    "moduleDetection": "force", // 각각의 파일을 독립적인 모듈로 간주하도록 설정
+    "skipLibCheck": true
   },
   "ts-node": {
     "esm": true // ts-node가 esm module system으로 동작하도록 설정
