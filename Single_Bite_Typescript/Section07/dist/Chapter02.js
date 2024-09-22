@@ -1,0 +1,27 @@
+/**
+ * 제네릭 활용 사례 1
+ */
+function swap(a, b) {
+    return [b, a];
+}
+const [a, b] = swap(1, "a");
+/**
+ * 제네릭 활용 사례 2
+ */
+function returnFirstValue(data) {
+    return data[0];
+}
+let num = returnFirstValue([0, 1, 2]);
+// 0
+let str = returnFirstValue([1, "hello", "world"]);
+// "hello"
+/**
+ * 제네릭 활용 사례 3
+ */
+function getLength(data) {
+    return data.length;
+}
+let var1 = getLength([1, 2, 3]);
+let var2 = getLength("12345");
+let var3 = getLength({ length: 10 });
+export {};
